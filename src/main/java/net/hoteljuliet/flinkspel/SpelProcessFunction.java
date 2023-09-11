@@ -1,9 +1,7 @@
 package net.hoteljuliet.flinkspel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.hoteljuliet.spel.Context;
 import net.hoteljuliet.spel.Pipeline;
-import org.apache.commons.lang3.BooleanUtils;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.state.ListStateDescriptor;
 import org.apache.flink.configuration.Configuration;
@@ -13,11 +11,14 @@ import org.apache.flink.streaming.api.checkpoint.CheckpointedFunction;
 import org.apache.flink.streaming.api.functions.ProcessFunction;
 import org.apache.flink.util.Collector;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * A nice example of the power and re-usability of a small class powered by a DSL/EL.
+ * This ~200 lines of Java can perform just about any stateless transformation as well as enrichment - whatever the DSL provides.
+ */
 public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Map<String, Object>> implements CheckpointedFunction {
 
     public static ObjectMapper objectMapper = new ObjectMapper();
@@ -51,7 +52,7 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
         synchronized (this) {
 
             /**
-             * In processElement() - the SPEl context contains the inbound event, an in-memory state object, and a flag that it's not onTimer().
+             * In processElement() - the SPEL context contains the inbound event, an in-memory state object, and a flag that it's not onTimer().
              * This lets the pipeline do any (or all) of the following:
              * 1) a stateless transform of the event from what was received to an output
              * 2) add enrichment data from state to the event (for example, S3 data tha twas fetched during onTimer())
@@ -87,13 +88,13 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
         }
     }
 
-
     public void onTimer(long timestamp, ProcessFunction<Map<String, Object>, Map<String, Object>>.OnTimerContext context, Collector<Map<String, Object>> collector) throws Exception {
         synchronized (this) {
 
             /**
-             * In onTimer - the SPEl context contains the in-memory state object, and a flag that it's being invoked in onTimer().
-             * This lets the pipeline perform periodic processing, like fetching enrichment data form S3 (or some other external service)
+             * In onTimer - the SPEL context contains the in-memory state object, and a flag that it's being invoked in onTimer().
+             * This lets the pipeline perform periodic processing, including slower operations like fetching enrichment data form S3 (or some other external service).
+             * Just make sure the pipeline pivots with an "if _on_timer else" block.
              */
             net.hoteljuliet.spel.Context spelContext = new net.hoteljuliet.spel.Context();
             spelContext.put("_state", state);
