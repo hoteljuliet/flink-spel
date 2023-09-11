@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A nice example of the power and re-usability of a small class powered by a DSL/EL.
- * This ~200 lines of Java can perform just about any stateless transformation as well as enrichment - whatever the DSL provides.
+ * This ~200 lines of Java can perform just about any stateless transformation (including Filter) as well as enrichment - whatever the DSL provides.
  */
 public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Map<String, Object>> implements CheckpointedFunction {
 

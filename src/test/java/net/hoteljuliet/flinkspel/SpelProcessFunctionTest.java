@@ -30,19 +30,19 @@ public class SpelProcessFunctionTest {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
 
-        Map<String, Object> event = new HashMap<String, Object>();
+        Map<String, Object> event = new HashMap<>();
         event.put("name", "Dennis");
         event.put("age", "35");
         event.put("total1", "12000");
-        event.put("total3", "1200");
+        event.put("total2", "1200");
         event.put("total3", "120");
-        event.put("total3", "12");
+        event.put("total4", "12");
         event.put("lastPurchaseUnixMs", "1694464850980");
         DataStream<Map<String, Object>> in = env.fromElements(event);
 
         DataStream<Map<String, Object>> out = in.process(new SpelProcessFunction("test", config));
 
-        out.sinkTo(new PrintSink<Map<String, Object>>("printSink-> "));
+        out.sinkTo(new PrintSink<>("printSink-> "));
 
         env.execute();
     }
