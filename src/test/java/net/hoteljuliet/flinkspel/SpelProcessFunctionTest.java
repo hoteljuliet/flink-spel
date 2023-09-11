@@ -24,8 +24,9 @@ public class SpelProcessFunctionTest {
                 "logStackTrace: true\n" +
                 "logPerformance: true\n" +
                 "config:\n" +
-                "  - crunch: {dest: _output, exp: $1 + $2, variables: [_event.total1, _event.total2]}\n" +
-                "  - add-i: {dest: _collect, value: true}\n";
+                "  - crunch: { dest: _output.someTotal, exp: $1 + $2, variables: [_event.total1, _event.total2] }\n" +
+                "  - add-m: { dest: _output.name, exp: \"{{_event.name}}\" }\n" +
+                "  - add-i: { dest: _collect, value: true }\n";
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
 
@@ -41,7 +42,7 @@ public class SpelProcessFunctionTest {
 
         DataStream<Map<String, Object>> out = in.process(new SpelProcessFunction("test", config));
 
-        out.sinkTo(new PrintSink<Map<String, Object>>());
+        out.sinkTo(new PrintSink<Map<String, Object>>("printSink-> "));
 
         env.execute();
     }

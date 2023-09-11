@@ -25,7 +25,6 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
     private String name;
     private String config;
     private transient Pipeline pipeline;
-    private Object lock = new Object();
 
     private ListState<String> operatorState;
 
@@ -40,12 +39,16 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
         // if not restored from a checkpoint, create new pipeline
         if (null == pipeline) {
             pipeline = Pipeline.fromString(config);
+            pipeline.build();
+        }
+        if (null == state) {
+            state = new ConcurrentHashMap<>();
         }
     }
 
     public void processElement(Map<String, Object> event, ProcessFunction<Map<String, Object>, Map<String, Object>>.Context context, Collector<Map<String, Object>> collector) throws Exception {
 
-        synchronized (lock) {
+        synchronized (this) {
 
             /**
              * In processElement() - the SPEl context contains the inbound event, an in-memory state object, and a flag that it's not onTimer().
@@ -86,7 +89,7 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
 
 
     public void onTimer(long timestamp, ProcessFunction<Map<String, Object>, Map<String, Object>>.OnTimerContext context, Collector<Map<String, Object>> collector) throws Exception {
-        synchronized (lock) {
+        synchronized (this) {
 
             /**
              * In onTimer - the SPEl context contains the in-memory state object, and a flag that it's being invoked in onTimer().
@@ -121,7 +124,7 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
 
     public void snapshotState(FunctionSnapshotContext functionSnapshotContext) throws Exception {
 
-        synchronized (lock) {
+        synchronized (this) {
             operatorState.clear();
             String pipelineString = pipeline.snapshot();
             operatorState.add(pipelineString);
