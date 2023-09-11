@@ -47,5 +47,8 @@ public class SpelProcessFunctionTest {
         env.execute();
     }
 
-
+    @Test
+    public void test_snapshotAndRecovery() throws Exception {
+        // TODO:
+    }
 }
