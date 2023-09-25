@@ -19,13 +19,28 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * A Flink ProcessFunction that is completely driven by the SPEL language.
+ * Can be used for the following use cases:
+ * 1) Filter - use SPEL pipeline to determine if _collect is true or false. Support exists for sampling some % of data.
+ * 2) Stateless Transforms - use SPEL pipeline to transform _in to _out.
+ * 3) Enrichment - fetch enrichment data from an external source using SPEL statements when _onTimer is true, save enrichment data
+ *                 to _state. When onTimer is false add data from _state to _in. Note that as an un-keyed operator, the enrichment data
+ *                 is not partitioned by the key of the stream. In some use cases, it would make more sense to use a SpelKeyedProcessFunction.
+ * 4) Aggregation - aggregate _in to _state. Note that as an un-keyed operator, the aggregation would be over a random subset of the stream.
+ *                  While possible, it would make more sense to use a SpelKeyedProcessFunction.
+ *
+ * See Also:
+ * https://aws.amazon.com/blogs/big-data/common-streaming-data-enrichment-patterns-in-amazon-kinesis-data-analytics-for-apache-flink/
+ *
+ */
 public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Map<String, Object>> implements CheckpointedFunction {
 
     private String name;
-    Map<String, Object> pipelineConfig;
+    private Map<String, Object> pipelineConfig;
     private Pipeline pipeline;
     private ConcurrentHashMap<String, Object> state;
-    private transient ListState<Tuple2<Pipeline, ConcurrentHashMap>> checkpointedState;
+    private transient ListState<Tuple2<Pipeline, ConcurrentHashMap>> operatorState;
     private List<Tuple2<Pipeline, ConcurrentHashMap>> checkpoint;
 
     public SpelProcessFunction(String name, Map<String, Object> pipelineConfig) {
@@ -92,18 +107,8 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
     }
 
     @Override
-    public void open(Configuration parameters) throws Exception {
-        ;
-    }
-
-    @Override
-    public void close() throws Exception {
-        ;
-    }
-
-    @Override
     public void snapshotState(FunctionSnapshotContext context) throws Exception {
-        checkpointedState.update(checkpoint);
+        operatorState.update(checkpoint);
     }
 
     @Override
@@ -112,10 +117,10 @@ public class SpelProcessFunction extends ProcessFunction<Map<String, Object>, Ma
         TypeHint typeHint = new TypeHint<Tuple2<Pipeline, ConcurrentHashMap>>(){};
         TypeInformation typeInformation = TypeInformation.of(typeHint);
         ListStateDescriptor descriptor = new ListStateDescriptor<>(descriptorName, typeInformation);
-        checkpointedState = context.getOperatorStateStore().getListState(descriptor);
+        operatorState = context.getOperatorStateStore().getListState(descriptor);
 
         if (context.isRestored()) {
-            Tuple2<Pipeline, ConcurrentHashMap> tuple = checkpointedState.get().iterator().next();
+            Tuple2<Pipeline, ConcurrentHashMap> tuple = operatorState.get().iterator().next();
             checkpoint.add(tuple);
             pipeline = tuple.getField(0);
             state = tuple.getField(1);
