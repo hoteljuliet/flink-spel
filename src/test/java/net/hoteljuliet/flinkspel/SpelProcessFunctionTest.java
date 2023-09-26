@@ -1,6 +1,5 @@
 package net.hoteljuliet.flinkspel;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import net.hoteljuliet.spel.Parser;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -14,7 +13,6 @@ public class SpelProcessFunctionTest {
 
     @Test
     public void test() throws Exception {
-
         String config =
                 "stopOnFailure: true\n" +
                 "config:\n" +
@@ -23,7 +21,6 @@ public class SpelProcessFunctionTest {
                 "  - add: { dest: _collect, value: true }\n";
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();
-
         Map<String, Object> event = new HashMap<>();
         event.put("name", "Dennis");
         event.put("age", "35");
@@ -32,16 +29,11 @@ public class SpelProcessFunctionTest {
         event.put("total3", "120");
         event.put("total4", "12");
         event.put("lastPurchaseUnixMs", "1694464850980");
-        DataStream<Map<String, Object>> in = env.fromElements(event);
-
+        DataStream<Map<String, Object>> in = env.fromElements(event).name("source");
         Map<String, Object> pipelineConfig = Parser.objectMapper.readValue(config, Map.class);
-        DataStream<Map<String, Object>> out = in.process(new SpelProcessFunction("test", pipelineConfig));
-        out.sinkTo(new PrintSink<>("printSink-> "));
+        SpelProcessFunction spelProcessFunction = new SpelProcessFunction("test", pipelineConfig);
+        DataStream<Map<String, Object>> out = in.process(spelProcessFunction).name("spelProcess");
+        out.sinkTo(new PrintSink<>("printSink-> ")).name("print");
         env.execute();
-    }
-
-    @Test
-    public void test_snapshotAndRecovery() throws Exception {
-        // TODO:
     }
 }
